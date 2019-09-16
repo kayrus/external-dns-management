@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gardener/controller-manager-library/pkg/logger"
@@ -64,41 +65,13 @@ type designateClient struct {
 
 var _ designateClientInterface = &designateClient{}
 
-type authConfig struct {
-	AuthURL     string
-	Username    string
-	DomainName  string
-	DomainID    string
-	Password    string
-	ProjectName string
-	ProjectID   string
-	// UserDomainName/ID are optional
-	UserDomainID   string
-	UserDomainName string
-	// RegionName is optional
-	RegionName string
-}
-
 // authenticate in OpenStack and obtain Designate service endpoint
-func createDesignateServiceClient(logger logger.LogContext, authConfig *authConfig) (*gophercloud.ServiceClient, error) {
-	clientOpts := new(clientconfig.ClientOpts)
-	authInfo := &clientconfig.AuthInfo{
-		AuthURL:        authConfig.AuthURL,
-		Username:       authConfig.Username,
-		Password:       authConfig.Password,
-		DomainName:     authConfig.DomainName,
-		DomainID:       authConfig.DomainID,
-		ProjectName:    authConfig.ProjectName,
-		ProjectID:      authConfig.ProjectID,
-		UserDomainName: authConfig.UserDomainName,
-		UserDomainID:   authConfig.UserDomainID,
-	}
-	clientOpts.AuthInfo = authInfo
-
-	ao, err := clientconfig.AuthOptions(clientOpts)
+func createDesignateServiceClient(logger logger.LogContext) (*gophercloud.ServiceClient, error) {
+	ao, err := clientconfig.AuthOptions(nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client auth options: %+v", err)
 	}
+	ao.AllowReauth = true
 
 	logger.Infof("Using OpenStack Keystone at %s", ao.IdentityEndpoint)
 	providerClient, err := openstack.NewClient(ao.IdentityEndpoint)
@@ -123,7 +96,7 @@ func createDesignateServiceClient(logger logger.LogContext, authConfig *authConf
 	}
 
 	eo := gophercloud.EndpointOpts{
-		Region: authConfig.RegionName,
+		Region: os.Getenv("OS_REGION_NAME"),
 	}
 
 	client, err := openstack.NewDNSV2(providerClient, eo)

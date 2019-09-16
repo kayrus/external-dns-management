@@ -41,12 +41,7 @@ var _ provider.DNSHandler = &Handler{}
 
 // NewHandler constructs a new DNSHandler object.
 func NewHandler(config *provider.DNSHandlerConfig) (provider.DNSHandler, error) {
-	authConfig, err := readAuthConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	serviceClient, err := createDesignateServiceClient(config.Logger, authConfig)
+	serviceClient, err := createDesignateServiceClient(config.Logger)
 	if err != nil {
 		return nil, err
 	}
@@ -64,52 +59,6 @@ func NewHandler(config *provider.DNSHandlerConfig) (provider.DNSHandler, error) 
 	}
 
 	return &h, nil
-}
-
-func readAuthConfig(c *provider.DNSHandlerConfig) (*authConfig, error) {
-	authURL, err := c.GetRequiredProperty("OS_AUTH_URL")
-	if err != nil {
-		return nil, err
-	}
-	username, err := c.GetRequiredProperty("OS_USERNAME", "username")
-	if err != nil {
-		return nil, err
-	}
-	domainName := c.GetProperty("OS_DOMAIN_NAME", "domainName")
-	domainID := c.GetProperty("OS_DOMAIN_ID", "domainID")
-
-	password, err := c.GetRequiredProperty("OS_PASSWORD", "password")
-	if err != nil {
-		return nil, err
-	}
-	projectName := c.GetProperty("OS_PROJECT_NAME", "tenantName")
-	projectID := c.GetProperty("OS_PROJECT_ID", "tenantID")
-
-	// optional restriction to region
-	regionName := c.GetProperty("OS_REGION_NAME")
-	userDomainName := c.GetProperty("OS_USER_DOMAIN_NAME", "userDomainName")
-	userDomainID := c.GetProperty("OS_USER_DOMAIN_ID", "userDomainID")
-
-	if domainID != "" && userDomainName != "" {
-		return nil, fmt.Errorf("userDomainName can't be used together with domainID")
-	}
-	if domainName != "" && userDomainID != "" {
-		return nil, fmt.Errorf("userDomainID can't be used together with domainName")
-	}
-
-	authConfig := authConfig{
-		AuthURL:        authURL,
-		Username:       username,
-		Password:       password,
-		DomainName:     domainName,
-		DomainID:       domainID,
-		ProjectName:    projectName,
-		ProjectID:      projectID,
-		UserDomainID:   userDomainID,
-		UserDomainName: userDomainName,
-		RegionName:     regionName}
-
-	return &authConfig, nil
 }
 
 // Release releases the zone cache.
